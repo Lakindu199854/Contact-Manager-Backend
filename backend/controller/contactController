@@ -1,0 +1,108 @@
+//Importing async handler
+const asyncHandler = require("express-async-handler");
+//Import the model
+const Contact = require("../models/contactModel")
+
+//Description for the api
+
+//@desc GET all contacts
+//@route GET /api/contacts
+//@access private 
+
+//Here from the constant Contact we get all the contacts,then we we pass it 
+const getContact = asyncHandler(async(req,res)=>{
+    const contacts = await Contact.find({user_id:req.user.id});
+    res.status(200).json(contacts);
+});
+
+//@desc Create new contactD
+//@route POST /api/contacts
+//@access private 
+
+const createContact = asyncHandler(async(req,res)=>{
+    //Here lets print the request body
+    console.log("The request body is : ",req.body);
+    const {name,email,phone}=req.body;
+    if(!name || !email ||!phone){
+        res.status(400);
+        throw new Error("All fields are mandotory");
+    }
+    //Here we create the contact
+    const contact = await Contact.create({
+        name,
+        email,
+        phone,
+        user_id:req.user.id,
+    });
+    res.status(201).json({contact});
+});
+
+//@desc GET contact by Id
+//@route GET /api/contacts/:id
+//@access private 
+
+const getContactById = asyncHandler(async(req,res)=>{
+    const contact = await Contact.findById(req.params.id);
+    //If there is no contact make status code 400 and throw an error
+    if(!contact){
+        res.status(404);
+        throw new Error("Contact not found")
+    }
+    //Do this when a contact is found
+    res.status(200).json(contact);
+});
+
+//@desc update contact by id
+//@route PUT /api/contacts/:id
+//@access private 
+
+const updateContactById = asyncHandler(async(req,res)=>{
+    const contact = await Contact.findById(req.params.id);
+    
+    if(!contact){
+        res.status(404);
+        throw new Error("Contact not found")
+    }
+    //If this is equal that means a user is trying to update another users contacts
+    if(contact.user_id.toString() != req.user.id){
+        res.status(403);
+        throw new Error("User dont allowed to update another user contacts");
+    }
+
+    //Do this when a contact is found
+    //findByIdAndUpdate is a inbuilt function
+    const updateContact = await Contact.findByIdAndUpdate(
+        //id that needs to be updated is passed
+        req.params.id,
+        //New body that needs to be updated is also passed to this method
+        req.body,
+        //Query option is passed to the function 
+        {new:true}
+    );
+    res.status(200).json(updateContact);
+    
+});
+
+//@desc delete contact by id
+//@route DELETE /api/contacts/:id
+//@access private 
+
+const deleteContactById = asyncHandler(async(req,res)=>{
+    const contact = await Contact.findById(req.params.id);
+    if(!contact){yield
+        res.status(404);
+        throw new Error("Contact not found")
+    }
+     //If this is equal that means a user is trying to delete another users contacts
+     if(contact.user_id.toString() != req.user.id){
+        res.status(403);
+        throw new Error("User dont allowed to update another user contacts");
+    }
+
+    //If there s a contact in the id then remove it
+    await Contact.deleteOne({ _id: req.params.id });
+    //Here the deleted contact is passed here
+    res.status(200).json(contact);
+});
+
+module.exports = {getContact,getContactById,createContact,updateContactById,deleteContactById};
